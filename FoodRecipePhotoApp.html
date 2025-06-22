@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Recipe Photo App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles for all screen sizes (mobile-first approach) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to start to prevent content overflow */
+            min-height: 100vh;
+            padding: 16px; /* Reduced padding for smaller mobile screens */
+            box-sizing: border-box;
+        }
+        #app-container {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px; /* Reduced padding for mobile */
+            max-width: 1200px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr; /* Single column layout for mobile */
+            gap: 24px; /* Slightly reduced gap for mobile */
+            box-sizing: border-box;
+        }
+        /* Media query for larger screens (e.g., tablets and desktops) */
+        @media (min-width: 768px) {
+            body {
+                padding: 20px; /* Standard padding for larger screens */
+            }
+            #app-container {
+                padding: 30px; /* Standard padding for larger screens */
+                grid-template-columns: 1.5fr 1fr; /* Camera/Controls on left, Recipe on right */
+                gap: 30px; /* Standard gap for larger screens */
+            }
+        }
+
+        .section {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 20px; /* Adjusted padding for sections on mobile */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        @media (min-width: 768px) {
+            .section {
+                padding: 25px; /* Standard padding for larger screens */
+            }
+        }
+
+        video {
+            width: 100%;
+            max-height: 300px; /* Adjusted max-height for better mobile viewing */
+            background-color: #000;
+            border-radius: 10px;
+            object-fit: cover; /* Ensures video fills container without distortion */
+        }
+        @media (min-width: 768px) {
+            video {
+                max-height: 400px; /* Standard max-height for larger screens */
+            }
+        }
+
+        canvas {
+            display: none; /* Hidden canvas for capturing frames */
+        }
+        #photo-timeline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; /* Smaller gap for mobile timeline */
+            margin-top: 15px;
+            justify-content: center;
+            max-height: 200px; /* Smaller max-height for mobile timeline scroll */
+            overflow-y: auto; /* Enable vertical scrolling */
+            padding-right: 5px; /* Prevent scrollbar from overlapping content */
+        }
+        @media (min-width: 768px) {
+            #photo-timeline {
+                gap: 15px; /* Standard gap for larger screens */
+                margin-top: 20px;
+                max-height: 300px; /* Standard max-height for larger screens */
+                padding-right: 10px;
+            }
+        }
+
+        #photo-timeline img {
+            width: 80px; /* Smaller image size for mobile timeline */
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease-in-out;
+        }
+        @media (min-width: 768px) {
+            #photo-timeline img {
+                width: 100px; /* Standard image size for larger screens */
+                height: 100px;
+            }
+        }
+
+        #photo-timeline img:hover {
+            transform: scale(1.05);
+        }
+        .btn {
+            padding: 14px 20px; /* Increased padding for better touch target on mobile */
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            margin-top: 8px; /* Adjusted margin-top for button spacing */
+            font-size: 0.95rem; /* Slightly adjusted font size for mobile buttons */
+        }
+        @media (min-width: 768px) {
+            .btn {
+                padding: 12px 25px; /* Standard padding for larger screens */
+                margin-top: 10px;
+                font-size: 1rem;
+            }
+        }
+
+        .btn-primary {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+        }
+        .btn-primary:hover:enabled {
+            background-color: #4338ca; /* Darker indigo */
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: #6b7280; /* Gray */
+            color: white;
+        }
+        .btn-secondary:hover:enabled {
+            background-color: #4b5563; /* Darker gray */
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+        select, input[type="number"] {
+            padding: 12px 15px; /* Increased padding for better touch target */
+            border-radius: 8px;
+            border: 1px solid #d1d5db; /* Light gray border */
+            background-color: #f9fafb; /* Lighter background */
+            margin-top: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        #recipe-output h2 {
+            font-size: 1.6rem; /* Slightly smaller for mobile */
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px; /* Adjusted margin */
+        }
+        @media (min-width: 768px) {
+            #recipe-output h2 {
+                font-size: 1.8rem; /* Standard for larger screens */
+                margin-bottom: 20px;
+            }
+        }
+
+        #recipe-output h3 {
+            font-size: 1.3rem; /* Slightly smaller for mobile */
+            font-weight: 600;
+            color: #4f46e5;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+        @media (min-width: 768px) {
+            #recipe-output h3 {
+                font-size: 1.4rem; /* Standard for larger screens */
+                margin-top: 20px;
+                margin-bottom: 10px;
+            }
+        }
+
+        #recipe-output p, #recipe-output ul, #recipe-output ol {
+            font-size: 0.95rem; /* Slightly smaller for mobile readability */
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        @media (min-width: 768px) {
+            #recipe-output p, #recipe-output ul, #recipe-output ol {
+                font-size: 1rem; /* Standard for larger screens */
+                margin-bottom: 10px;
+            }
+        }
+
+        #recipe-output ul, #recipe-output ol {
+            list-style-position: inside;
+            padding-left: 0;
+        }
+        #recipe-output li {
+            margin-bottom: 4px; /* Adjusted margin */
+        }
+        .message-modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 100; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px; /* Smaller padding for modal on mobile */
+            box-sizing: border-box;
+        }
+        .message-modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px; /* Smaller padding for modal content on mobile */
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            width: 95%; /* Wider modal on mobile */
+            max-width: 350px; /* Reduced max-width for mobile */
+            text-align: center;
+            position: relative;
+        }
+        @media (min-width: 768px) {
+            .message-modal-content {
+                padding: 25px; /* Standard padding for larger screens */
+                width: 90%;
+                max-width: 400px;
+            }
+        }
+
+        .message-modal-content h3 {
+            font-size: 1.4rem; /* Adjusted for mobile */
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        @media (min-width: 768px) {
+            .message-modal-content h3 {
+                font-size: 1.5rem; /* Standard for larger screens */
+                margin-bottom: 15px;
+            }
+        }
+
+        .message-modal-content p {
+            font-size: 0.95rem; /* Adjusted for mobile */
+            color: #555;
+            margin-bottom: 15px;
+        }
+        @media (min-width: 768px) {
+            .message-modal-content p {
+                font-size: 1rem; /* Standard for larger screens */
+                margin-bottom: 20px;
+            }
+        }
+
+        .close-button {
+            background-color: #4f46e5;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .close-button:hover {
+            background-color: #4338ca;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto 0;
+            display: none; /* Hidden by default */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 bg-gray-100 min-h-screen flex items-center justify-center">
+    <div id="app-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-white rounded-xl shadow-lg">
+
+        <!-- Camera and Controls Section -->
+        <div class="section col-span-1">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Food Recipe Photo App</h1>
+
+            <!-- Camera Preview -->
+            <div class="mb-6">
+                <video id="video-preview" autoplay playsinline class="w-full max-h-96 rounded-lg shadow-md"></video>
+                <canvas id="photo-canvas"></canvas>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
+                <div class="flex-grow w-full">
+                    <label for="capture-interval" class="block text-gray-700 text-sm font-medium mb-2">Capture Interval:</label>
+                    <select id="capture-interval" class="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="5000">5 Seconds</option>
+                        <option value="10000">10 Seconds</option>
+                        <option value="15000">15 Seconds</option>
+                        <option value="30000">30 Seconds</option>
+                        <option value="60000">1 Minute</option>
+                        <option value="300000">5 Minutes</option>
+                        <option value="600000">10 Minutes</option>
+                        <option value="1200000">20 Minutes</option>
+                        <option value="1800000">30 Minutes</option>
+                    </select>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4 sm:mt-0">
+                    <button id="start-cooking-btn" class="btn btn-primary w-full sm:w-auto">Start Cooking</button>
+                    <button id="stop-cooking-btn" class="btn btn-secondary w-full sm:w-auto" disabled>Stop Cooking</button>
+                </div>
+            </div>
+
+            <!-- Photo Timeline -->
+            <div class="mt-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Cooking Photo Timeline</h2>
+                <div id="photo-timeline" class="flex flex-wrap justify-center gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50 max-h-64 overflow-y-auto">
+                    <!-- Captured photos will appear here -->
+                    <p id="timeline-placeholder" class="text-gray-500">No photos captured yet.</p>
+                </div>
+                <div class="text-center mt-6 flex flex-col gap-4">
+                    <button id="generate-recipe-btn" class="btn btn-primary w-full sm:w-auto" disabled>Generate Recipe</button>
+                    <button id="generate-shopping-list-btn" class="btn btn-primary w-full sm:w-auto" disabled>Generate Shopping List ✨</button>
+                    <button id="suggest-recipe-variation-btn" class="btn btn-primary w-full sm:w-auto" disabled>Suggest Recipe Variation ✨</button>
+                    <div id="loading-spinner" class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Output Section -->
+        <div class="section col-span-1">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Generated Recipe</h2>
+            <div id="recipe-output" class="min-h-[400px] bg-gray-50 p-6 rounded-lg border border-gray-200 overflow-y-auto">
+                <p class="text-gray-500 text-center">Your recipe will appear here after generation.</p>
+            </div>
+
+            <!-- Shopping List Output Section -->
+            <div id="shopping-list-output" class="mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200 hidden">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Shopping List</h3>
+                <div id="shopping-list-content">
+                    <p class="text-gray-500 text-center">Shopping list will appear here.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Message Modal (for alerts) -->
+    <div id="message-modal" class="message-modal">
+        <div class="message-modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <button id="modal-close-button" class="close-button">OK</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables for Firebase and app state
+        let app;
+        let db;
+        let auth;
+        let userId = 'anonymous'; // Default to anonymous
+        let isAuthReady = false;
+
+        // Firebase Initialization and Authentication
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+        async function initFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            console.log("Firebase Auth Ready. User ID:", userId);
+                        } else {
+                            // If no user, try to sign in anonymously
+                            try {
+                                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                                if (initialAuthToken) {
+                                    await signInWithCustomToken(auth, initialAuthToken);
+                                } else {
+                                    await signInAnonymously(auth);
+                                }
+                                userId = auth.currentUser.uid;
+                                console.log("Signed in anonymously. User ID:", userId);
+                            } catch (anonError) {
+                                console.error("Error signing in anonymously:", anonError);
+                                showMessage("Authentication Error", "Could not sign in anonymously. Some features might be limited.");
+                            }
+                        }
+                        isAuthReady = true;
+                        // Now that auth is ready, we can initialize listeners or fetch data if needed
+                    });
+                } else {
+                    console.warn("Firebase config not provided. Running in a limited mode (no persistence/auth).");
+                    isAuthReady = true; // Still allow app to run without auth for basic functionality
+                }
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                showMessage("Initialization Error", "Could not initialize Firebase services. Please check your configuration.");
+                isAuthReady = true; // Still allow app to run, but with warnings
+            }
+        }
+
+        initFirebase(); // Call Firebase initialization
+
+        // --- DOM Elements ---
+        const videoPreview = document.getElementById('video-preview');
+        const photoCanvas = document.getElementById('photo-canvas');
+        const captureIntervalSelect = document.getElementById('capture-interval');
+        const startCookingBtn = document.getElementById('start-cooking-btn');
+        const stopCookingBtn = document.getElementById('stop-cooking-btn');
+        const photoTimeline = document.getElementById('photo-timeline');
+        const timelinePlaceholder = document.getElementById('timeline-placeholder');
+        const generateRecipeBtn = document.getElementById('generate-recipe-btn');
+        const generateShoppingListBtn = document.getElementById('generate-shopping-list-btn'); // New
+        const suggestRecipeVariationBtn = document.getElementById('suggest-recipe-variation-btn'); // New
+        const recipeOutput = document.getElementById('recipe-output');
+        const shoppingListOutput = document.getElementById('shopping-list-output'); // New
+        const shoppingListContent = document.getElementById('shopping-list-content'); // New
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+        // Message Modal elements
+        const messageModal = document.getElementById('message-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseButton = document.getElementById('modal-close-button');
+
+        // --- State Variables ---
+        let mediaStream;
+        let captureIntervalId;
+        let capturedPhotos = []; // Stores base64 image data
+        let isCapturing = false;
+        let currentRecipe = null; // Stores the last generated recipe object
+
+        // --- Helper Functions ---
+
+        /**
+         * Displays a custom message modal instead of alert().
+         * @param {string} title - The title of the message.
+         * @param {string} message - The message content.
+         */
+        function showMessage(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            messageModal.style.display = 'flex'; // Show the modal
+        }
+
+        // Close message modal
+        modalCloseButton.addEventListener('click', () => {
+            messageModal.style.display = 'none';
+        });
+
+        /**
+         * Initializes the camera stream and sets it to the video element.
+         * Only called when "Start Cooking" is clicked.
+         */
+        async function startCamera() {
+            try {
+                // Request camera access preferring the environment (back) camera
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                videoPreview.srcObject = mediaStream;
+                videoPreview.play();
+                showMessage("Camera Active", "Camera is now active. Capturing photos.");
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+                showMessage("Camera Error", "Could not access your camera. Please ensure it's connected and you've granted permission. On mobile, ensure browser has camera permissions.");
+                // Disable buttons if camera fails to start
+                startCookingBtn.disabled = true;
+                stopCookingBtn.disabled = true;
+                generateRecipeBtn.disabled = true;
+                generateShoppingListBtn.disabled = true;
+                suggestRecipeVariationBtn.disabled = true;
+                isCapturing = false; // Ensure capturing state is false if camera fails
+                clearInterval(captureIntervalId); // Clear any pending interval
+            }
+        }
+
+        /**
+         * Stops the camera stream.
+         * Called when "Stop Cooking" is clicked.
+         */
+        function stopCamera() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                videoPreview.srcObject = null; // Clear the video element
+                showMessage("Camera Off", "Camera has been turned off.");
+            }
+        }
+
+        /**
+         * Captures a frame from the video stream and adds it to the timeline.
+         */
+        function capturePhoto() {
+            if (!videoPreview.srcObject) {
+                console.warn("No video stream available to capture photo.");
+                return;
+            }
+
+            const context = photoCanvas.getContext('2d');
+            photoCanvas.width = videoPreview.videoWidth;
+            photoCanvas.height = videoPreview.videoHeight;
+            context.drawImage(videoPreview, 0, 0, photoCanvas.width, photoCanvas.height);
+
+            const imageDataUrl = photoCanvas.toDataURL('image/jpeg', 0.8); // Capture as JPEG with quality
+            capturedPhotos.push(imageDataUrl);
+
+            // Display photo in timeline
+            const img = document.createElement('img');
+            img.src = imageDataUrl;
+            img.alt = `Cooking Step ${capturedPhotos.length}`;
+            img.title = `Cooking Step ${capturedPhotos.length}`;
+            photoTimeline.prepend(img); // Add new photos to the beginning
+            timelinePlaceholder.style.display = 'none'; // Hide placeholder if photos exist
+            photoTimeline.scrollTop = 0; // Scroll to top to show latest photo
+        }
+
+        /**
+         * Starts the automatic photo capture process.
+         */
+        async function startCapturing() {
+            if (isCapturing) return;
+
+            // First, start the camera
+            await startCamera();
+
+            // If camera failed to start, do not proceed with capturing
+            if (!mediaStream || !videoPreview.srcObject) {
+                console.error("Camera failed to start, cannot begin capturing.");
+                return;
+            }
+
+            isCapturing = true;
+            capturedPhotos = []; // Clear previous photos
+            photoTimeline.innerHTML = ''; // Clear timeline display
+            timelinePlaceholder.style.display = 'block'; // Show placeholder again
+            recipeOutput.innerHTML = '<p class="text-gray-500 text-center">Your recipe will appear here after generation.</p>'; // Clear recipe
+            shoppingListOutput.classList.add('hidden'); // Hide shopping list
+            shoppingListContent.innerHTML = '<p class="text-gray-500 text-center">Shopping list will appear here.</p>';
+            currentRecipe = null; // Clear current recipe
+            generateShoppingListBtn.disabled = true; // Disable new buttons
+            suggestRecipeVariationBtn.disabled = true;
+            generateRecipeBtn.disabled = true; // Disable until cooking stops
+
+            const interval = parseInt(captureIntervalSelect.value);
+            captureIntervalId = setInterval(capturePhoto, interval);
+            capturePhoto(); // Capture first photo immediately
+            
+            startCookingBtn.disabled = true;
+            stopCookingBtn.disabled = false;
+        }
+
+        /**
+         * Stops the automatic photo capture process.
+         */
+        function stopCapturing() {
+            if (!isCapturing) return;
+
+            clearInterval(captureIntervalId);
+            isCapturing = false;
+            stopCamera(); // Turn off the camera
+
+            startCookingBtn.disabled = false;
+            stopCookingBtn.disabled = true;
+            generateRecipeBtn.disabled = false; // Enable generate button after stopping
+            showMessage("Cooking Stopped!", `Captured ${capturedPhotos.length} photos. Ready to generate recipe.`);
+            console.log("Captured Photos:", capturedPhotos.length);
+        }
+
+        /**
+         * Extracts a JSON object from a potentially wrapped string.
+         * Looks for the first '{' and the last '}' to get the JSON content.
+         * @param {string} rawString - The string potentially containing JSON.
+         * @returns {string|null} - The extracted JSON string or null if not found.
+         */
+        function extractJsonFromString(rawString) {
+            const firstBrace = rawString.indexOf('{');
+            const lastBrace = rawString.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                return rawString.substring(firstBrace, lastBrace + 1);
+            }
+            return null; // No valid JSON object found
+        }
+
+        /**
+         * Generates a recipe using the Gemini API based on captured photos.
+         */
+        async function generateRecipe() {
+            if (capturedPhotos.length === 0) {
+                showMessage("No Photos", "Please capture some photos before generating a recipe.");
+                return;
+            }
+
+            generateRecipeBtn.disabled = true;
+            generateShoppingListBtn.disabled = true; // Disable shopping list button during recipe generation
+            suggestRecipeVariationBtn.disabled = true; // Disable variation button during recipe generation
+            loadingSpinner.style.display = 'block';
+            recipeOutput.innerHTML = '<p class="text-center text-gray-600">Generating recipe... This might take a moment.</p>';
+            shoppingListOutput.classList.add('hidden'); // Hide shopping list
+            shoppingListContent.innerHTML = '<p class="text-gray-500 text-center">Shopping list will appear here.</p>'; // Clear shopping list content
+
+            try {
+                // Prepare content for the API call
+                let chatHistory = [];
+                // Initial prompt for the model
+                chatHistory.push({
+                    role: "user",
+                    parts: [{ text: "Based on these cooking progress images, generate a detailed recipe including: a creative and fitting recipe name, estimated cooking time, a list of ingredients, and numbered cooking steps. Provide the response in a JSON format. The JSON should have 'recipeName' (string), 'cookingTime' (string), 'ingredients' (array of strings), and 'cookingSteps' (array of strings). If you cannot determine some details, make a reasonable guess or leave them empty if truly unknown." }]
+                });
+
+                // Add images to the chat history as inlineData
+                capturedPhotos.forEach((imageData) => {
+                    // Extract base64 data from data URL
+                    const base64Data = imageData.split(',')[1];
+                    const mimeType = imageData.split(',')[0].split(':')[1].split(';')[0];
+                    chatHistory.push({
+                        role: "user",
+                        parts: [
+                            {
+                                inlineData: {
+                                    mimeType: mimeType,
+                                    data: base64Data
+                                }
+                            }
+                        ]
+                    });
+                });
+
+                const payload = {
+                    contents: chatHistory,
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "recipeName": { "type": "STRING" },
+                                "cookingTime": { "type": "STRING" },
+                                "ingredients": { "type": "ARRAY", "items": { "type": "STRING" } },
+                                "cookingSteps": { "type": "ARRAY", "items": { "type": "STRING" } }
+                            },
+                            "propertyOrdering": ["recipeName", "cookingTime", "ingredients", "cookingSteps"]
+                        }
+                    }
+                };
+
+                const apiKey = ""; // Canvas will provide this at runtime in the fetch call. DO NOT ADD any API key validation.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // Check if the response itself was successful (HTTP status 200-299)
+                if (!response.ok) {
+                    const errorBody = await response.text(); // Get raw error body
+                    console.error(`API response was not OK: ${response.status} ${response.statusText}`, errorBody);
+                    throw new Error(`API request failed with status ${response.status}: ${response.statusText}. Details: ${errorBody.substring(0, 500)}...`); // Log more error detail
+                }
+
+                const result = await response.json();
+                console.log("Gemini API Raw Result:", result); // Log the full raw result for inspection
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const rawJsonString = result.candidates[0].content.parts[0].text;
+                    
+                    console.log("Raw JSON string from API (generateRecipe):", rawJsonString);
+
+                    const cleanedJsonString = extractJsonFromString(rawJsonString);
+
+                    if (!cleanedJsonString) {
+                         console.error("Failed to extract JSON from raw API string:", rawJsonString);
+                         showMessage("Recipe Generation Error", "The AI response did not contain a valid JSON structure. Please try again or provide clearer cooking steps.");
+                         recipeOutput.innerHTML = '<p class="text-center text-red-500">Failed to parse generated recipe. Try again.</p>';
+                         return;
+                    }
+
+                    try {
+                        const recipe = JSON.parse(cleanedJsonString);
+                        currentRecipe = recipe; // Store the generated recipe
+                        displayRecipe(recipe);
+                        generateShoppingListBtn.disabled = false; // Enable shopping list button
+                        suggestRecipeVariationBtn.disabled = false; // Enable variation button
+                    } catch (parseError) {
+                        console.error("Error parsing JSON recipe from API (generateRecipe):", parseError, "Raw string:", rawJsonString, "Cleaned string:", cleanedJsonString);
+                        showMessage("Recipe Generation Error", "The AI generated an invalid recipe format. Please try again or adjust your prompt.");
+                        recipeOutput.innerHTML = '<p class="text-center text-red-500">Failed to parse generated recipe. Try again.</p>';
+                    }
+
+                } else {
+                    console.error("Gemini API response did not contain expected content structure for recipe:", result);
+                    showMessage("Recipe Generation Failed", "The AI did not provide a valid recipe. This might be due to ambiguous images or an issue with the AI response structure. Please try again with different photos or a simpler cooking process.");
+                    recipeOutput.innerHTML = '<p class="text-center text-red-500">Failed to generate recipe. Please try again.</p>';
+                }
+            } catch (error) {
+                console.error("Critical Error during recipe generation:", error);
+                showMessage("API Error", `An error occurred while generating the recipe: ${error.message}. Please check your console for more details.`);
+                recipeOutput.innerHTML = '<p class="text-center text-red-500">Error generating recipe. Check console for details.</p>';
+            } finally {
+                generateRecipeBtn.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        /**
+         * Generates a shopping list based on the current recipe's ingredients.
+         */
+        async function generateShoppingList() {
+            if (!currentRecipe || !currentRecipe.ingredients || currentRecipe.ingredients.length === 0) {
+                showMessage("No Recipe", "Please generate a recipe first to create a shopping list.");
+                return;
+            }
+
+            generateShoppingListBtn.disabled = true;
+            loadingSpinner.style.display = 'block';
+            shoppingListOutput.classList.remove('hidden'); // Show shopping list section
+            shoppingListContent.innerHTML = '<p class="text-center text-gray-600">Generating shopping list...</p>';
+
+            try {
+                const prompt = `Convert the following list of ingredients into a concise shopping list, grouped by common categories (e.g., Produce, Dairy, Pantry, Meat, Spices, etc.). Provide the response as a markdown formatted list.
+
+Ingredients:
+${currentRecipe.ingredients.join('\n')}`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Canvas will provide this at runtime in the fetch call. DO NOT ADD any API key validation.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error(`Shopping List API response was not OK: ${response.status} ${response.statusText}`, errorBody);
+                    throw new Error(`API request failed with status ${response.status}: ${response.statusText}. Details: ${errorBody.substring(0, 500)}...`);
+                }
+
+                const result = await response.json();
+                console.log("Shopping List API Raw Result:", result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const shoppingListMarkdown = result.candidates[0].content.parts[0].text;
+                    // Simple conversion from markdown to HTML for display
+                    const shoppingListHtml = markdownToHtml(shoppingListMarkdown);
+                    shoppingListContent.innerHTML = shoppingListHtml;
+                } else {
+                    console.error("Gemini API response did not contain expected content structure for shopping list:", result);
+                    showMessage("Shopping List Failed", "Could not generate shopping list. The AI did not provide a valid response. Please try again.");
+                    shoppingListContent.innerHTML = '<p class="text-center text-red-500">Failed to generate shopping list. Try again.</p>';
+                }
+            } catch (error) {
+                console.error("Critical Error during shopping list generation:", error);
+                showMessage("API Error", `An error occurred while generating the shopping list: ${error.message}. Please check your console for more details.`);
+                shoppingListContent.innerHTML = '<p class="text-center text-red-500">Error generating shopping list. Check console for details.</p>';
+            } finally {
+                generateShoppingListBtn.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        /**
+         * Suggests a recipe variation based on the current recipe.
+         */
+        async function suggestRecipeVariation() {
+            if (!currentRecipe) {
+                showMessage("No Recipe", "Please generate a recipe first to suggest a variation.");
+                return;
+            }
+
+            suggestRecipeVariationBtn.disabled = true;
+            loadingSpinner.style.display = 'block';
+            recipeOutput.innerHTML = '<p class="text-center text-gray-600">Suggesting recipe variation...</p>';
+            shoppingListOutput.classList.add('hidden'); // Hide shopping list
+
+            try {
+                const prompt = `Given the following recipe, suggest a creative and unique variation. Re-write the entire recipe in the same JSON format, including a new, fitting recipe name, estimated cooking time (adjusted if necessary), a modified list of ingredients, and updated cooking steps.
+
+Original Recipe:
+${JSON.stringify(currentRecipe, null, 2)}
+
+Provide the response in the exact same JSON format:
+{
+    "recipeName": "New Recipe Name",
+    "cookingTime": "X minutes/hours",
+    "ingredients": ["ingredient 1", "ingredient 2"],
+    "cookingSteps": ["step 1", "step 2"]
+}`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = {
+                    contents: chatHistory,
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "recipeName": { "type": "STRING" },
+                                "cookingTime": { "type": "STRING" },
+                                "ingredients": { "type": "ARRAY", "items": { "type": "STRING" } },
+                                "cookingSteps": { "type": "ARRAY", "items": { "type": "STRING" } }
+                            },
+                            "propertyOrdering": ["recipeName", "cookingTime", "ingredients", "cookingSteps"]
+                        }
+                    }
+                };
+
+                const apiKey = ""; // Canvas will provide this at runtime in the fetch call. DO NOT ADD any API key validation.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error(`Recipe Variation API response was not OK: ${response.status} ${response.statusText}`, errorBody);
+                    throw new Error(`API request failed with status ${response.status}: ${response.statusText}. Details: ${errorBody.substring(0, 500)}...`);
+                }
+
+                const result = await response.json();
+                console.log("Recipe Variation API Raw Result:", result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    let rawJsonString = result.candidates[0].content.parts[0].text;
+
+                    console.log("Raw JSON string from API (suggestRecipeVariation):", rawJsonString);
+                    
+                    const cleanedJsonString = extractJsonFromString(rawJsonString);
+
+                    if (!cleanedJsonString) {
+                         console.error("Failed to extract JSON from raw API string (variation):", rawJsonString);
+                         showMessage("Recipe Variation Error", "The AI response did not contain a valid JSON structure for variation. Please try again.");
+                         recipeOutput.innerHTML = '<p class="text-center text-red-500">Failed to parse suggested variation. Try again.</p>';
+                         return;
+                    }
+
+
+                    try {
+                        const variedRecipe = JSON.parse(cleanedJsonString);
+                        currentRecipe = variedRecipe; // Update current recipe to the varied one
+                        displayRecipe(variedRecipe);
+                    } catch (parseError) {
+                        console.error("Error parsing JSON recipe variation from API:", parseError, "Raw string:", rawJsonString, "Cleaned string:", cleanedJsonString);
+                        showMessage("Recipe Variation Error", "The AI generated an invalid recipe variation format. Please try again.");
+                        recipeOutput.innerHTML = '<p class="text-center text-red-500">Failed to parse suggested variation. Try again.</p>';
+                    }
+
+                } else {
+                    console.error("Gemini API response did not contain expected content structure for recipe variation:", result);
+                    showMessage("Recipe Variation Failed", "Could not suggest a recipe variation. The AI did not provide a valid response. Please try again.");
+                    recipeOutput.innerHTML = '<p class="text-center text-red-500">Failed to suggest variation. Try again.</p>';
+                }
+            } catch (error) {
+                console.error("Critical Error during recipe variation generation:", error);
+                showMessage("API Error", `An error occurred while suggesting a variation: ${error.message}. Please check your console for more details.`);
+                recipeOutput.innerHTML = '<p class="text-center text-red-500">Error suggesting variation. Check console for details.</p>';
+            } finally {
+                suggestRecipeVariationBtn.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+
+        /**
+         * Displays the generated recipe in the output section.
+         * @param {object} recipe - The recipe object from AI.
+         */
+        function displayRecipe(recipe) {
+            let html = `<h2 class="text-center text-indigo-700">${recipe.recipeName || 'Untitled Recipe'}</h2>`;
+            html += `<p class="text-center text-gray-600 mb-4">Estimated Cooking Time: ${recipe.cookingTime || 'Not specified'}</p>`;
+
+            html += `<h3>Ingredients:</h3><ul>`;
+            if (recipe.ingredients && recipe.ingredients.length > 0) {
+                recipe.ingredients.forEach(item => {
+                    html += `<li>${item}</li>`;
+                });
+            } else {
+                html += `<li>No ingredients listed.</li>`;
+            }
+            html += `</ul>`;
+
+            html += `<h3>Cooking Steps:</h3><ol>`;
+            if (recipe.cookingSteps && recipe.cookingSteps.length > 0) {
+                recipe.cookingSteps.forEach(step => {
+                    html += `<li>${step}</li>`;
+                });
+            } else {
+                html += `<li>No cooking steps provided.</li>`;
+            }
+            html += `</ol>`;
+
+            recipeOutput.innerHTML = html;
+        }
+
+        /**
+         * Basic markdown to HTML converter for shopping list display.
+         * Only handles lists and bold text for simplicity.
+         * @param {string} markdown - Markdown string.
+         * @returns {string} HTML string.
+         */
+        function markdownToHtml(markdown) {
+            let html = markdown;
+            // Convert unordered lists
+            html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>(\n<li>.*<\/li>)*)/gs, '<ul>$1</ul>');
+            // Convert bold text
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Convert newlines to paragraphs for non-list items or breaks
+            html = html.replace(/^(?!<ul|<\/ul>|<li>).*$/gm, '<p>$&</p>');
+            return html;
+        }
+
+
+        // --- Event Listeners ---
+        startCookingBtn.addEventListener('click', startCapturing);
+        stopCookingBtn.addEventListener('click', stopCapturing);
+        generateRecipeBtn.addEventListener('click', generateRecipe);
+        generateShoppingListBtn.addEventListener('click', generateShoppingList); // New event listener
+        suggestRecipeVariationBtn.addEventListener('click', suggestRecipeVariation); // New event listener
+
+        // No window.onload = startCamera; Camera is now started by startCapturing
+    </script>
+</body>
+</html>
